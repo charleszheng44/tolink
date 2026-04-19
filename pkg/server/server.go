@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -82,6 +83,10 @@ func (sv *Server) handleLinks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := sv.s.Delete(shortcut); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,7 +13,7 @@ import (
 )
 
 func main() {
-	port := flag.Int("port", 80, "Port to listen on")
+	addr := flag.String("addr", "127.0.0.1:4080", "Address to listen on (e.g. 127.0.0.1:4080 or :80)")
 	defaultData := filepath.Join(os.Getenv("HOME"), ".config", "tolink", "links.json")
 	data := flag.String("data", defaultData, "Path to links JSON file")
 	flag.Parse()
@@ -25,7 +24,6 @@ func main() {
 	}
 
 	srv := server.New(s, web.Content)
-	addr := fmt.Sprintf(":%d", *port)
-	log.Printf("listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, srv))
+	log.Printf("listening on %s", *addr)
+	log.Fatal(http.ListenAndServe(*addr, srv))
 }
