@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>tolink</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 1rem; }
+    #link-form { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+    #link-form input { flex: 1; padding: 0.4rem 0.6rem; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 0.4rem 0.8rem; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5; }
+    button:hover { background: #e0e0e0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border: 1px solid #ddd; }
+    th { background: #f0f0f0; }
+    tr:hover td { background: #fafafa; }
+  </style>
+</head>
+<body>
+  <h1>tolink</h1>
+  <form id="link-form">
+    <input type="text" id="shortcut" placeholder="shortcut" required>
+    <input type="text" id="url" placeholder="url" required>
+    <button type="submit">Save</button>
+  </form>
+  <table id="links-table">
+    <thead>
+      <tr>
+        <th>Shortcut</th>
+        <th>URL</th>
+        <th>Edit</th>
+        <th>Delete</th>
+      </tr>
+    </thead>
+    <tbody id="links-body"></tbody>
+  </table>
+  <script>
+    async function loadLinks() {
+      const res = await fetch('/.tolink/api/links');
+      if (!res.ok) { console.error('failed to load links', res.status); return; }
+      const data = await res.json();
+      const tbody = document.getElementById('links-body');
+      tbody.innerHTML = '';
+      const shortcuts = Object.keys(data).sort();
+      for (const s of shortcuts) {
+        const tr = document.createElement('tr');
+
+        const tdShortcut = document.createElement('td');
+        tdShortcut.textContent = s;
+
+        const tdUrl = document.createElement('td');
+        tdUrl.textContent = data[s];
+
+        const tdEdit = document.createElement('td');
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', () => editLink(s, data[s]));
+        tdEdit.appendChild(editBtn);
+
+        const tdDelete = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.addEventListener('click', () => deleteLink(s));
+        tdDelete.appendChild(delBtn);
+
+        tr.append(tdShortcut, tdUrl, tdEdit, tdDelete);
+        tbody.appendChild(tr);
+      }
+    }
+
+    function editLink(shortcut, url) {
+      document.getElementById('shortcut').value = shortcut;
+      document.getElementById('url').value = url;
+    }
+
+    async function deleteLink(shortcut) {
+      const res = await fetch('/.tolink/api/links/' + encodeURIComponent(shortcut), {method: 'DELETE'});
+      if (!res.ok) { console.error('failed to delete link', res.status); return; }
+      await loadLinks();
+    }
+
+    document.getElementById('link-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const shortcut = document.getElementById('shortcut').value;
+      const url = document.getElementById('url').value;
+      const res = await fetch('/.tolink/api/links', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({shortcut, url})
+      });
+      if (!res.ok) { console.error('failed to save link', res.status); return; }
+      document.getElementById('shortcut').value = '';
+      document.getElementById('url').value = '';
+      await loadLinks();
+    });
+
+    loadLinks();
+  </script>
+</body>
+</html>
