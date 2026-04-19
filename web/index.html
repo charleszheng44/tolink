@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>tolink</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { margin-bottom: 1.5rem; }
+    form { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    input { padding: 0.4rem 0.6rem; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+    input[name=shortcut] { width: 120px; }
+    input[name=url] { flex: 1; min-width: 200px; }
+    button { padding: 0.4rem 0.8rem; font-size: 1rem; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f5f5f5; }
+    button:hover { background: #e0e0e0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #eee; }
+    th { background: #f5f5f5; }
+    td:last-child, td:nth-last-child(2) { width: 60px; }
+  </style>
+</head>
+<body>
+  <h1>tolink</h1>
+  <form id="link-form">
+    <input name="shortcut" placeholder="shortcut" required>
+    <input name="url" placeholder="https://..." required>
+    <button type="submit">Save</button>
+  </form>
+  <table>
+    <thead>
+      <tr><th>Shortcut</th><th>URL</th><th></th><th></th></tr>
+    </thead>
+    <tbody id="links-body"></tbody>
+  </table>
+  <script>
+    const form = document.getElementById('link-form');
+    const tbody = document.getElementById('links-body');
+
+    async function loadLinks() {
+      const res = await fetch('/.tolink/api/links');
+      const links = await res.json();
+      tbody.innerHTML = '';
+      for (const [shortcut, url] of Object.entries(links).sort()) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + shortcut + '</td>' +
+          '<td><a href="' + url + '">' + url + '</a></td>' +
+          '<td><button onclick="editLink(\'' + shortcut + '\',\'' + url + '\')">Edit</button></td>' +
+          '<td><button onclick="deleteLink(\'' + shortcut + '\')">Delete</button></td>';
+        tbody.appendChild(tr);
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const shortcut = form.shortcut.value.trim();
+      const url = form.url.value.trim();
+      await fetch('/.tolink/api/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shortcut, url }),
+      });
+      form.reset();
+      await loadLinks();
+    });
+
+    async function deleteLink(shortcut) {
+      await fetch('/.tolink/api/links/' + shortcut, { method: 'DELETE' });
+      await loadLinks();
+    }
+
+    function editLink(shortcut, url) {
+      form.shortcut.value = shortcut;
+      form.url.value = url;
+    }
+
+    loadLinks();
+  </script>
+</body>
+</html>
