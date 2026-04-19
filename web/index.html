@@ -37,6 +37,7 @@
   <script>
     async function loadLinks() {
       const res = await fetch('/.tolink/api/links');
+      if (!res.ok) { console.error('failed to load links', res.status); return; }
       const data = await res.json();
       const tbody = document.getElementById('links-body');
       tbody.innerHTML = '';
@@ -73,7 +74,8 @@
     }
 
     async function deleteLink(shortcut) {
-      await fetch('/.tolink/api/links/' + encodeURIComponent(shortcut), {method: 'DELETE'});
+      const res = await fetch('/.tolink/api/links/' + encodeURIComponent(shortcut), {method: 'DELETE'});
+      if (!res.ok) { console.error('failed to delete link', res.status); return; }
       await loadLinks();
     }
 
@@ -81,11 +83,12 @@
       e.preventDefault();
       const shortcut = document.getElementById('shortcut').value;
       const url = document.getElementById('url').value;
-      await fetch('/.tolink/api/links', {
+      const res = await fetch('/.tolink/api/links', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({shortcut, url})
       });
+      if (!res.ok) { console.error('failed to save link', res.status); return; }
       document.getElementById('shortcut').value = '';
       document.getElementById('url').value = '';
       await loadLinks();
