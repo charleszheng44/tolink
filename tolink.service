@@ -5,8 +5,8 @@ After=network.target
 [Service]
 ExecStart=/usr/local/bin/tolink
 Restart=on-failure
-# Adjust User= to match the local account that should run the service.
-User=zc
+# Set User= to the local account that should run the service.
+# User=tolink
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 

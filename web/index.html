@@ -11,6 +11,7 @@
     <input type="text" id="url" placeholder="url" required>
     <button type="submit">Save</button>
   </form>
+  <p id="error-msg" style="color:red;display:none"></p>
   <table id="links-table">
     <thead>
       <tr>
@@ -23,38 +24,50 @@
     <tbody id="links-body"></tbody>
   </table>
   <script>
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.style.display = msg ? '' : 'none';
+    }
+
     async function loadLinks() {
-      const res = await fetch('/.tolink/api/links');
-      const data = await res.json();
-      const tbody = document.getElementById('links-body');
-      tbody.innerHTML = '';
-      const shortcuts = Object.keys(data).sort();
-      for (const s of shortcuts) {
-        const tr = document.createElement('tr');
+      try {
+        const res = await fetch('/.tolink/api/links');
+        if (!res.ok) throw new Error('Failed to load links: ' + res.status);
+        const data = await res.json();
+        showError('');
+        const tbody = document.getElementById('links-body');
+        tbody.innerHTML = '';
+        const shortcuts = Object.keys(data).sort();
+        for (const s of shortcuts) {
+          const tr = document.createElement('tr');
 
-        const tdShortcut = document.createElement('td');
-        tdShortcut.textContent = s;
-        tr.appendChild(tdShortcut);
+          const tdShortcut = document.createElement('td');
+          tdShortcut.textContent = s;
+          tr.appendChild(tdShortcut);
 
-        const tdUrl = document.createElement('td');
-        tdUrl.textContent = data[s];
-        tr.appendChild(tdUrl);
+          const tdUrl = document.createElement('td');
+          tdUrl.textContent = data[s];
+          tr.appendChild(tdUrl);
 
-        const tdEdit = document.createElement('td');
-        const btnEdit = document.createElement('button');
-        btnEdit.textContent = 'Edit';
-        btnEdit.addEventListener('click', () => editLink(s, data[s]));
-        tdEdit.appendChild(btnEdit);
-        tr.appendChild(tdEdit);
+          const tdEdit = document.createElement('td');
+          const btnEdit = document.createElement('button');
+          btnEdit.textContent = 'Edit';
+          btnEdit.addEventListener('click', () => editLink(s, data[s]));
+          tdEdit.appendChild(btnEdit);
+          tr.appendChild(tdEdit);
 
-        const tdDelete = document.createElement('td');
-        const btnDelete = document.createElement('button');
-        btnDelete.textContent = 'Delete';
-        btnDelete.addEventListener('click', () => deleteLink(s));
-        tdDelete.appendChild(btnDelete);
-        tr.appendChild(tdDelete);
+          const tdDelete = document.createElement('td');
+          const btnDelete = document.createElement('button');
+          btnDelete.textContent = 'Delete';
+          btnDelete.addEventListener('click', () => deleteLink(s));
+          tdDelete.appendChild(btnDelete);
+          tr.appendChild(tdDelete);
 
-        tbody.appendChild(tr);
+          tbody.appendChild(tr);
+        }
+      } catch (err) {
+        showError('Error loading links: ' + err.message);
       }
     }
 
@@ -64,22 +77,34 @@
     }
 
     async function deleteLink(shortcut) {
-      await fetch('/.tolink/api/links/' + encodeURIComponent(shortcut), {method: 'DELETE'});
-      await loadLinks();
+      try {
+        const res = await fetch('/.tolink/api/links/' + encodeURIComponent(shortcut), {method: 'DELETE'});
+        if (!res.ok) throw new Error('Delete failed: ' + res.status);
+        showError('');
+        await loadLinks();
+      } catch (err) {
+        showError('Error deleting link: ' + err.message);
+      }
     }
 
     document.getElementById('link-form').addEventListener('submit', async function(e) {
       e.preventDefault();
       const shortcut = document.getElementById('shortcut').value;
       const url = document.getElementById('url').value;
-      await fetch('/.tolink/api/links', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({shortcut, url})
-      });
-      document.getElementById('shortcut').value = '';
-      document.getElementById('url').value = '';
-      await loadLinks();
+      try {
+        const res = await fetch('/.tolink/api/links', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({shortcut, url})
+        });
+        if (!res.ok) throw new Error('Save failed: ' + res.status);
+        showError('');
+        document.getElementById('shortcut').value = '';
+        document.getElementById('url').value = '';
+        await loadLinks();
+      } catch (err) {
+        showError('Error saving link: ' + err.message);
+      }
     });
 
     loadLinks();
