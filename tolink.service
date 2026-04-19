@@ -1,0 +1,13 @@
+[Unit]
+Description=tolink - local URL shortcut service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/tolink
+Restart=on-failure
+User=zc
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
