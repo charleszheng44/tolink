@@ -31,21 +31,28 @@
       const shortcuts = Object.keys(data).sort();
       for (const s of shortcuts) {
         const tr = document.createElement('tr');
-        tr.innerHTML =
-          '<td>' + escHtml(s) + '</td>' +
-          '<td>' + escHtml(data[s]) + '</td>' +
-          '<td><button onclick="editLink(\'' + escJs(s) + '\',\'' + escJs(data[s]) + '\')">Edit</button></td>' +
-          '<td><button onclick="deleteLink(\'' + escJs(s) + '\')">Delete</button></td>';
+
+        const tdShortcut = document.createElement('td');
+        tdShortcut.textContent = s;
+
+        const tdUrl = document.createElement('td');
+        tdUrl.textContent = data[s];
+
+        const tdEdit = document.createElement('td');
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', () => editLink(s, data[s]));
+        tdEdit.appendChild(editBtn);
+
+        const tdDelete = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.addEventListener('click', () => deleteLink(s));
+        tdDelete.appendChild(delBtn);
+
+        tr.append(tdShortcut, tdUrl, tdEdit, tdDelete);
         tbody.appendChild(tr);
       }
-    }
-
-    function escHtml(s) {
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-
-    function escJs(s) {
-      return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     }
 
     function editLink(shortcut, url) {
