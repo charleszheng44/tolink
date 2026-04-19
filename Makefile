@@ -8,7 +8,7 @@ install: build
 	sudo cp tolink.service /etc/systemd/system/tolink.service
 	sudo systemctl daemon-reload
 	sudo systemctl enable tolink
-	sudo systemctl restart tolink
+	sudo systemctl is-active --quiet tolink && sudo systemctl restart tolink || sudo systemctl start tolink
 
 clean:
 	rm -rf bin/
