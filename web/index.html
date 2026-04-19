@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>tolink</title>
+</head>
+<body>
+  <h1>tolink</h1>
+  <form id="link-form">
+    <input type="text" id="shortcut" placeholder="shortcut" required>
+    <input type="text" id="url" placeholder="url" required>
+    <button type="submit">Save</button>
+  </form>
+  <table id="links-table">
+    <thead>
+      <tr>
+        <th>Shortcut</th>
+        <th>URL</th>
+        <th>Edit</th>
+        <th>Delete</th>
+      </tr>
+    </thead>
+    <tbody id="links-body"></tbody>
+  </table>
+  <script>
+    async function loadLinks() {
+      const res = await fetch('/.tolink/api/links');
+      const data = await res.json();
+      const tbody = document.getElementById('links-body');
+      tbody.innerHTML = '';
+      const shortcuts = Object.keys(data).sort();
+      for (const s of shortcuts) {
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td>' + escHtml(s) + '</td>' +
+          '<td>' + escHtml(data[s]) + '</td>' +
+          '<td><button onclick="editLink(\'' + escJs(s) + '\',\'' + escJs(data[s]) + '\')">Edit</button></td>' +
+          '<td><button onclick="deleteLink(\'' + escJs(s) + '\')">Delete</button></td>';
+        tbody.appendChild(tr);
+      }
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function escJs(s) {
+      return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    }
+
+    function editLink(shortcut, url) {
+      document.getElementById('shortcut').value = shortcut;
+      document.getElementById('url').value = url;
+    }
+
+    async function deleteLink(shortcut) {
+      await fetch('/.tolink/api/links/' + encodeURIComponent(shortcut), {method: 'DELETE'});
+      await loadLinks();
+    }
+
+    document.getElementById('link-form').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const shortcut = document.getElementById('shortcut').value;
+      const url = document.getElementById('url').value;
+      await fetch('/.tolink/api/links', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({shortcut, url})
+      });
+      document.getElementById('shortcut').value = '';
+      document.getElementById('url').value = '';
+      await loadLinks();
+    });
+
+    loadLinks();
+  </script>
+</body>
+</html>
