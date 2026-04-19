@@ -66,6 +66,10 @@ func (sv *Server) handleLinks(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "missing fields", http.StatusBadRequest)
 			return
 		}
+		if !strings.HasPrefix(body.URL, "http://") && !strings.HasPrefix(body.URL, "https://") {
+			http.Error(w, "URL must use http or https scheme", http.StatusBadRequest)
+			return
+		}
 		if err := sv.s.Set(body.Shortcut, body.URL); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
