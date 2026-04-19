@@ -23,7 +23,9 @@ func newTestServer(t *testing.T) *Server {
 
 func TestKnownShortcutRedirect(t *testing.T) {
 	sv := newTestServer(t)
-	sv.s.Set("gh", "https://github.com")
+	if err := sv.s.Set("gh", "https://github.com"); err != nil {
+		t.Fatal(err)
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/gh", nil)
 	w := httptest.NewRecorder()
@@ -162,5 +164,42 @@ func TestDeleteNonExistentShortcut(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestDeleteCollectionPathReturnsBadRequest(t *testing.T) {
+	sv := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodDelete, "/.tolink/api/links", nil)
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestGetSubPathNotAllowed(t *testing.T) {
+	sv := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/.tolink/api/links/foo", nil)
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected 405, got %d", w.Code)
+	}
+}
+
+func TestPostSubPathNotAllowed(t *testing.T) {
+	sv := newTestServer(t)
+
+	body, _ := json.Marshal(map[string]string{"shortcut": "gh", "url": "https://github.com"})
+	req := httptest.NewRequest(http.MethodPost, "/.tolink/api/links/foo", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected 405, got %d", w.Code)
 	}
 }

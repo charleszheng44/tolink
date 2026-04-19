@@ -53,14 +53,24 @@ func (sv *Server) adminHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (sv *Server) handleLinks(w http.ResponseWriter, r *http.Request) {
+	isCollection := r.URL.Path == "/.tolink/api/links"
 	switch r.Method {
 	case http.MethodGet:
+		if !isCollection {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		links := sv.s.List()
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(links); err != nil {
 			log.Printf("encode links: %v", err)
 		}
 	case http.MethodPost:
+		if !isCollection {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		var body struct {
 			Shortcut string `json:"shortcut"`
 			URL      string `json:"url"`
@@ -84,6 +94,10 @@ func (sv *Server) handleLinks(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodDelete:
+		if isCollection {
+			http.Error(w, "missing shortcut", http.StatusBadRequest)
+			return
+		}
 		shortcut := strings.TrimPrefix(r.URL.Path, "/.tolink/api/links/")
 		if shortcut == "" {
 			http.Error(w, "missing shortcut", http.StatusBadRequest)

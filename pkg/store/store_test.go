@@ -7,6 +7,15 @@ import (
 	"testing"
 )
 
+func mustNew(t *testing.T, path string) *Store {
+	t.Helper()
+	s, err := New(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
 func TestNewNonExistentFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "links.json")
@@ -21,7 +30,7 @@ func TestNewNonExistentFile(t *testing.T) {
 
 func TestSetAndGet(t *testing.T) {
 	dir := t.TempDir()
-	s, _ := New(filepath.Join(dir, "links.json"))
+	s := mustNew(t, filepath.Join(dir, "links.json"))
 	if err := s.Set("gh", "https://github.com"); err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +45,7 @@ func TestSetAndGet(t *testing.T) {
 
 func TestGetMissingKey(t *testing.T) {
 	dir := t.TempDir()
-	s, _ := New(filepath.Join(dir, "links.json"))
+	s := mustNew(t, filepath.Join(dir, "links.json"))
 	_, ok := s.Get("missing")
 	if ok {
 		t.Error("expected missing key to return false")
@@ -45,7 +54,7 @@ func TestGetMissingKey(t *testing.T) {
 
 func TestList(t *testing.T) {
 	dir := t.TempDir()
-	s, _ := New(filepath.Join(dir, "links.json"))
+	s := mustNew(t, filepath.Join(dir, "links.json"))
 	s.Set("a", "http://a.com")
 	s.Set("b", "http://b.com")
 	list := s.List()
@@ -59,7 +68,7 @@ func TestList(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	dir := t.TempDir()
-	s, _ := New(filepath.Join(dir, "links.json"))
+	s := mustNew(t, filepath.Join(dir, "links.json"))
 	s.Set("gh", "https://github.com")
 	if err := s.Delete("gh"); err != nil {
 		t.Fatal(err)
@@ -74,7 +83,7 @@ func TestPersistenceAcrossReload(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "links.json")
 
-	s1, _ := New(path)
+	s1 := mustNew(t, path)
 	s1.Set("gh", "https://github.com")
 
 	s2, err := New(path)
@@ -92,7 +101,7 @@ func TestPersistenceAcrossReload(t *testing.T) {
 
 func TestDeleteNonExistent(t *testing.T) {
 	dir := t.TempDir()
-	s, _ := New(filepath.Join(dir, "links.json"))
+	s := mustNew(t, filepath.Join(dir, "links.json"))
 	err := s.Delete("missing")
 	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got %v", err)
@@ -102,7 +111,7 @@ func TestDeleteNonExistent(t *testing.T) {
 func TestAtomicWriteNoTempFiles(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "links.json")
-	s, _ := New(path)
+	s := mustNew(t, path)
 	s.Set("gh", "https://github.com")
 
 	entries, err := os.ReadDir(dir)
