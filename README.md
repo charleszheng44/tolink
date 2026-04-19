@@ -15,6 +15,23 @@ Add the following line to `/etc/hosts` so your browser resolves `to` to localhos
 127.0.0.1 to
 ```
 
+## One-time port redirect setup
+
+The service listens on port 4080, but browsers connect to port 80 for plain `http://` URLs. Redirect port 80 to 4080 with iptables:
+
+```bash
+sudo iptables -t nat -A OUTPUT -d 127.0.0.1 -p tcp --dport 80 -j REDIRECT --to-ports 4080
+```
+
+To persist the rule across reboots:
+
+```bash
+sudo apt install iptables-persistent
+sudo netfilter-persistent save
+```
+
+After this, `http://to/gh` works in your browser. Once you have visited any `http://to/…` URL, Chrome learns that `to` is a real host and you can drop the `http://` prefix — bare `to/gh` will navigate directly without searching.
+
 ## Build and install
 
 ```bash
