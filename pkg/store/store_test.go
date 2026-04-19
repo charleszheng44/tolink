@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -86,6 +87,15 @@ func TestPersistenceAcrossReload(t *testing.T) {
 	}
 	if got != "https://github.com" {
 		t.Errorf("got %q after reload", got)
+	}
+}
+
+func TestDeleteNonExistent(t *testing.T) {
+	dir := t.TempDir()
+	s, _ := New(filepath.Join(dir, "links.json"))
+	err := s.Delete("missing")
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
 	}
 }
 

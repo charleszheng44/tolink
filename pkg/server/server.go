@@ -2,7 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/charleszheng44/tolink/pkg/store"
@@ -37,7 +40,9 @@ func (sv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (sv *Server) adminHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/.tolink/" {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write(sv.ui)
+		if _, err := w.Write(sv.ui); err != nil {
+			log.Printf("write ui: %v", err)
+		}
 		return
 	}
 	if r.URL.Path == "/.tolink/api/links" || strings.HasPrefix(r.URL.Path, "/.tolink/api/links/") {
@@ -52,7 +57,9 @@ func (sv *Server) handleLinks(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		links := sv.s.List()
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(links)
+		if err := json.NewEncoder(w).Encode(links); err != nil {
+			log.Printf("encode links: %v", err)
+		}
 	case http.MethodPost:
 		var body struct {
 			Shortcut string `json:"shortcut"`
@@ -64,6 +71,11 @@ func (sv *Server) handleLinks(w http.ResponseWriter, r *http.Request) {
 		}
 		if body.Shortcut == "" || body.URL == "" {
 			http.Error(w, "missing fields", http.StatusBadRequest)
+			return
+		}
+		u, err := url.Parse(body.URL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+			http.Error(w, "url must start with http:// or https://", http.StatusBadRequest)
 			return
 		}
 		if err := sv.s.Set(body.Shortcut, body.URL); err != nil {
@@ -78,7 +90,11 @@ func (sv *Server) handleLinks(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := sv.s.Delete(shortcut); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			if errors.Is(err, store.ErrNotFound) {
+				http.Error(w, "shortcut not found", http.StatusNotFound)
+			} else {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)

@@ -125,12 +125,42 @@ func TestDeleteLink(t *testing.T) {
 func TestPostMissingFields(t *testing.T) {
 	sv := newTestServer(t)
 
-	body, _ := json.Marshal(map[string]string{"shortcut": "gh"})
-	req := httptest.NewRequest(http.MethodPost, "/.tolink/api/links", bytes.NewReader(body))
+	for _, body := range []map[string]string{
+		{"shortcut": "gh"},          // missing url
+		{"url": "https://github.com"}, // missing shortcut
+	} {
+		b, _ := json.Marshal(body)
+		req := httptest.NewRequest(http.MethodPost, "/.tolink/api/links", bytes.NewReader(b))
+		w := httptest.NewRecorder()
+		sv.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("body=%v: expected 400, got %d", body, w.Code)
+		}
+	}
+}
+
+func TestPostInvalidURLScheme(t *testing.T) {
+	sv := newTestServer(t)
+
+	for _, badURL := range []string{"javascript:alert(1)", "ftp://example.com", "data:text/html,hi"} {
+		body, _ := json.Marshal(map[string]string{"shortcut": "x", "url": badURL})
+		req := httptest.NewRequest(http.MethodPost, "/.tolink/api/links", bytes.NewReader(body))
+		w := httptest.NewRecorder()
+		sv.ServeHTTP(w, req)
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("url=%q: expected 400, got %d", badURL, w.Code)
+		}
+	}
+}
+
+func TestDeleteNonExistentShortcut(t *testing.T) {
+	sv := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodDelete, "/.tolink/api/links/nosuch", nil)
 	w := httptest.NewRecorder()
 	sv.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Code)
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
 	}
 }
