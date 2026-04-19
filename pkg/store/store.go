@@ -2,11 +2,15 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 )
+
+// ErrNotFound is returned when a shortcut does not exist in the store.
+var ErrNotFound = errors.New("shortcut not found")
 
 // Store is a thread-safe, file-backed map of shortcut → URL.
 type Store struct {
@@ -62,10 +66,13 @@ func (s *Store) Set(shortcut, url string) error {
 	return s.save()
 }
 
-// Delete removes a shortcut and persists to disk.
+// Delete removes a shortcut and persists to disk. Returns ErrNotFound if the shortcut does not exist.
 func (s *Store) Delete(shortcut string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if _, ok := s.data[shortcut]; !ok {
+		return ErrNotFound
+	}
 	delete(s.data, shortcut)
 	return s.save()
 }
