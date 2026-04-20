@@ -128,7 +128,7 @@ func TestPostMissingFields(t *testing.T) {
 	sv := newTestServer(t)
 
 	for _, body := range []map[string]string{
-		{"shortcut": "gh"},          // missing url
+		{"shortcut": "gh"},            // missing url
 		{"url": "https://github.com"}, // missing shortcut
 	} {
 		b, _ := json.Marshal(body)
