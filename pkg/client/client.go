@@ -22,11 +22,11 @@ type Client interface {
 // otherwise a FileClient backed by dataPath.
 // If urlExplicit is true and the daemon is unreachable, the dial error is returned.
 func New(url, dataPath string, urlExplicit bool) (Client, error) {
-	hc := &http.Client{Timeout: 500 * time.Millisecond}
-	resp, err := hc.Get(url + "/.tolink/api/links")
+	probe := &http.Client{Timeout: 500 * time.Millisecond}
+	resp, err := probe.Head(url + "/.tolink/api/links")
 	if err == nil {
 		resp.Body.Close()
-		return &HTTPClient{base: url}, nil
+		return &HTTPClient{base: url, hc: &http.Client{Timeout: 30 * time.Second}}, nil
 	}
 	if urlExplicit {
 		return nil, err

@@ -12,10 +12,11 @@ import (
 // HTTPClient talks to a running tolink daemon over HTTP.
 type HTTPClient struct {
 	base string
+	hc   *http.Client
 }
 
 func (c *HTTPClient) List() (map[string]string, error) {
-	resp, err := http.Get(c.base + "/.tolink/api/links")
+	resp, err := c.hc.Get(c.base + "/.tolink/api/links")
 	if err != nil {
 		return nil, err
 	}
@@ -36,11 +37,11 @@ func (c *HTTPClient) Get(shortcut string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	url, ok := m[shortcut]
+	target, ok := m[shortcut]
 	if !ok {
 		return "", ErrNotFound
 	}
-	return url, nil
+	return target, nil
 }
 
 func (c *HTTPClient) Set(shortcut, url string) error {
@@ -48,7 +49,7 @@ func (c *HTTPClient) Set(shortcut, url string) error {
 		Shortcut string `json:"shortcut"`
 		URL      string `json:"url"`
 	}{shortcut, url})
-	resp, err := http.Post(c.base+"/.tolink/api/links", "application/json", bytes.NewReader(body))
+	resp, err := c.hc.Post(c.base+"/.tolink/api/links", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
@@ -65,7 +66,7 @@ func (c *HTTPClient) Delete(shortcut string) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.hc.Do(req)
 	if err != nil {
 		return err
 	}
