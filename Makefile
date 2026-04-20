@@ -2,6 +2,7 @@
 
 build:
 	go build -o bin/tolink ./cmd/tolink
+	go build -o bin/tolinkctl ./cmd/tolinkctl
 
 install: build
 	sudo cp bin/tolink /usr/local/bin/tolink
