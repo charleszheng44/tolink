@@ -1,15 +1,13 @@
 package client
 
 import (
-	"fmt"
-	"net"
 	"net/http"
 	"time"
 
 	"github.com/charleszheng44/tolink/pkg/store"
 )
 
-// ErrNotFound is returned when a shortcut does not exist.
+// ErrNotFound is re-exported from store so callers can use errors.Is(err, client.ErrNotFound).
 var ErrNotFound = store.ErrNotFound
 
 // Client manages tolink shortcuts.
@@ -20,23 +18,22 @@ type Client interface {
 	Delete(shortcut string) error
 }
 
-// New returns an HTTPClient if the daemon at baseURL is reachable, otherwise
-// a FileClient backed by dataPath. If urlExplicit is true and the daemon is
-// unreachable, an error is returned instead of falling back to file mode.
-func New(baseURL, dataPath string, urlExplicit bool) (Client, error) {
-	dialer := &net.Dialer{Timeout: 500 * time.Millisecond}
-	transport := &http.Transport{DialContext: dialer.DialContext}
-	probe := &http.Client{
-		Transport: transport,
-		Timeout:   500 * time.Millisecond,
-	}
-	resp, err := probe.Get(baseURL + "/.tolink/api/links")
+// New returns an HTTPClient if the daemon at url is reachable (any HTTP response),
+// otherwise a FileClient backed by dataPath.
+// If urlExplicit is true and the daemon is unreachable, the dial error is returned.
+func New(url, dataPath string, urlExplicit bool) (Client, error) {
+	probe := &http.Client{Timeout: 500 * time.Millisecond}
+	resp, err := probe.Head(url + "/.tolink/api/links")
 	if err == nil {
 		resp.Body.Close()
-		return &httpClient{baseURL: baseURL, hc: &http.Client{Timeout: 5 * time.Second}}, nil
+		return &HTTPClient{base: url, hc: &http.Client{Timeout: 30 * time.Second}}, nil
 	}
 	if urlExplicit {
-		return nil, fmt.Errorf("cannot connect to %s: %w", baseURL, err)
+		return nil, err
 	}
-	return newFileClient(dataPath)
+	s, err := store.New(dataPath)
+	if err != nil {
+		return nil, err
+	}
+	return &FileClient{s: s}, nil
 }

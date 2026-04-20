@@ -9,62 +9,60 @@ import (
 	"strings"
 )
 
-type httpClient struct {
-	baseURL string
-	hc      *http.Client
+// HTTPClient talks to a running tolink daemon over HTTP.
+type HTTPClient struct {
+	base string
+	hc   *http.Client
 }
 
-func (c *httpClient) List() (map[string]string, error) {
-	resp, err := c.hc.Get(c.baseURL + "/.tolink/api/links")
+func (c *HTTPClient) List() (map[string]string, error) {
+	resp, err := c.hc.Get(c.base + "/.tolink/api/links")
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var links map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&links); err != nil {
-		return nil, fmt.Errorf("decode response: %w", err)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server returned %d", resp.StatusCode)
 	}
-	return links, nil
+	var m map[string]string
+	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
-func (c *httpClient) Get(shortcut string) (string, error) {
-	links, err := c.List()
+// Get filters the full list client-side; the server has no per-shortcut GET endpoint.
+func (c *HTTPClient) Get(shortcut string) (string, error) {
+	m, err := c.List()
 	if err != nil {
 		return "", err
 	}
-	u, ok := links[shortcut]
+	target, ok := m[shortcut]
 	if !ok {
 		return "", ErrNotFound
 	}
-	return u, nil
+	return target, nil
 }
 
-func (c *httpClient) Set(shortcut, url string) error {
-	body, err := json.Marshal(struct {
+func (c *HTTPClient) Set(shortcut, url string) error {
+	body, _ := json.Marshal(struct {
 		Shortcut string `json:"shortcut"`
 		URL      string `json:"url"`
-	}{Shortcut: shortcut, URL: url})
-	if err != nil {
-		return fmt.Errorf("marshal request: %w", err)
-	}
-	resp, err := c.hc.Post(
-		c.baseURL+"/.tolink/api/links",
-		"application/json",
-		bytes.NewReader(body),
-	)
+	}{shortcut, url})
+	resp, err := c.hc.Post(c.base+"/.tolink/api/links", "application/json", bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("server error %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+	if resp.StatusCode != http.StatusNoContent {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+		return fmt.Errorf("server returned %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
 	}
 	return nil
 }
 
-func (c *httpClient) Delete(shortcut string) error {
-	req, err := http.NewRequest(http.MethodDelete, c.baseURL+"/.tolink/api/links/"+shortcut, nil)
+func (c *HTTPClient) Delete(shortcut string) error {
+	req, err := http.NewRequest(http.MethodDelete, c.base+"/.tolink/api/links/"+shortcut, nil)
 	if err != nil {
 		return err
 	}
@@ -76,9 +74,9 @@ func (c *httpClient) Delete(shortcut string) error {
 	if resp.StatusCode == http.StatusNotFound {
 		return ErrNotFound
 	}
-	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
-		b, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("server error %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
+	if resp.StatusCode != http.StatusNoContent {
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+		return fmt.Errorf("server returned %d: %s", resp.StatusCode, strings.TrimSpace(string(b)))
 	}
 	return nil
 }

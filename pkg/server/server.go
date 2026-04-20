@@ -55,6 +55,12 @@ func (sv *Server) adminHandler(w http.ResponseWriter, r *http.Request) {
 func (sv *Server) handleLinks(w http.ResponseWriter, r *http.Request) {
 	isCollection := r.URL.Path == "/.tolink/api/links"
 	switch r.Method {
+	case http.MethodHead:
+		if !isCollection {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	case http.MethodGet:
 		if !isCollection {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
