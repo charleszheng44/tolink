@@ -55,3 +55,51 @@ Open `http://to/.tolink/` in your browser to add, edit, and delete shortcuts.
 |------|---------|-------------|
 | `--port` | `80` | Port to listen on |
 | `--data` | `~/.config/tolink/links.json` | Path to the links JSON file |
+
+## tolinkctl
+
+`tolinkctl` is a command-line client for managing tolink shortcuts. It connects to the daemon at `http://127.0.0.1:4080` by default, and falls back to the JSON file at `~/.config/tolink/links.json` when the daemon is not running. Use `--url` to point at a different daemon address.
+
+### Install
+
+```bash
+make build    # compiles to ./bin/tolinkctl
+```
+
+Copy `./bin/tolinkctl` to somewhere on your `$PATH` (e.g. `sudo cp bin/tolinkctl /usr/local/bin/`).
+
+### Subcommands
+
+**list** — print all shortcuts:
+
+```bash
+tolinkctl list
+```
+
+**get** — print the URL for a shortcut:
+
+```bash
+tolinkctl get gh
+```
+
+**add** — create a new shortcut (fails if it already exists):
+
+```bash
+tolinkctl add gh https://github.com
+```
+
+**update** — overwrite an existing shortcut (fails if it does not exist):
+
+```bash
+tolinkctl update gh https://github.com/new
+```
+
+**delete** — remove a shortcut (fails if it does not exist):
+
+```bash
+tolinkctl delete gh
+```
+
+### Strict add/update semantics
+
+`add` and `update` are intentionally asymmetric: `add` refuses to overwrite an existing shortcut (exit code 3), and `update` refuses to create a new one (exit code 2). This prevents accidental overwrites and typos from silently creating orphan shortcuts.
