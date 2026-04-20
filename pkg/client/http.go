@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -39,14 +40,17 @@ func (c *httpClient) Get(shortcut string) (string, error) {
 }
 
 func (c *httpClient) Set(shortcut, url string) error {
-	body, _ := json.Marshal(struct {
+	body, err := json.Marshal(struct {
 		Shortcut string `json:"shortcut"`
 		URL      string `json:"url"`
 	}{Shortcut: shortcut, URL: url})
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
 	resp, err := c.hc.Post(
 		c.baseURL+"/.tolink/api/links",
 		"application/json",
-		strings.NewReader(string(body)),
+		bytes.NewReader(body),
 	)
 	if err != nil {
 		return err

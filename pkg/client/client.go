@@ -33,7 +33,7 @@ func New(baseURL, dataPath string, urlExplicit bool) (Client, error) {
 	resp, err := probe.Get(baseURL + "/.tolink/api/links")
 	if err == nil {
 		resp.Body.Close()
-		return &httpClient{baseURL: baseURL, hc: &http.Client{}}, nil
+		return &httpClient{baseURL: baseURL, hc: &http.Client{Timeout: 5 * time.Second}}, nil
 	}
 	if urlExplicit {
 		return nil, fmt.Errorf("cannot connect to %s: %w", baseURL, err)
