@@ -39,6 +39,113 @@ func TestKnownShortcutRedirect(t *testing.T) {
 	}
 }
 
+func TestSubpathRemainderForwarded(t *testing.T) {
+	sv := newTestServer(t)
+	if err := sv.s.Set("gh", "https://github.com"); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/gh/trending", nil)
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Errorf("expected 302, got %d", w.Code)
+	}
+	if got := w.Header().Get("Location"); got != "https://github.com/trending" {
+		t.Errorf("expected Location https://github.com/trending, got %q", got)
+	}
+}
+
+func TestMultiSegmentRemainderForwarded(t *testing.T) {
+	sv := newTestServer(t)
+	if err := sv.s.Set("gh", "https://github.com"); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/gh/charleszheng44/tolink", nil)
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Errorf("expected 302, got %d", w.Code)
+	}
+	if got := w.Header().Get("Location"); got != "https://github.com/charleszheng44/tolink" {
+		t.Errorf("expected Location https://github.com/charleszheng44/tolink, got %q", got)
+	}
+}
+
+func TestQueryStringPassthrough(t *testing.T) {
+	sv := newTestServer(t)
+	if err := sv.s.Set("gh", "https://github.com"); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/gh/trending?tab=daily", nil)
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if got := w.Header().Get("Location"); got != "https://github.com/trending?tab=daily" {
+		t.Errorf("expected Location https://github.com/trending?tab=daily, got %q", got)
+	}
+}
+
+func TestFragmentPassthrough(t *testing.T) {
+	sv := newTestServer(t)
+	if err := sv.s.Set("gh", "https://github.com"); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/gh/trending?tab=daily#readme", nil)
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if got := w.Header().Get("Location"); got != "https://github.com/trending?tab=daily#readme" {
+		t.Errorf("expected Location https://github.com/trending?tab=daily#readme, got %q", got)
+	}
+}
+
+func TestLongestPrefixWins(t *testing.T) {
+	sv := newTestServer(t)
+	if err := sv.s.Set("gh", "https://github.com"); err != nil {
+		t.Fatal(err)
+	}
+	if err := sv.s.Set("gh/me", "https://github.com/charleszheng44"); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/gh/me", nil)
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if got := w.Header().Get("Location"); got != "https://github.com/charleszheng44" {
+		t.Errorf("expected longest-prefix match to win, got %q", got)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/gh/me/tolink", nil)
+	w = httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if got := w.Header().Get("Location"); got != "https://github.com/charleszheng44/tolink" {
+		t.Errorf("expected longest-prefix match with remainder, got %q", got)
+	}
+}
+
+func TestMultiSegmentUnknownFallsThroughToAdmin(t *testing.T) {
+	sv := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/unknown/path", nil)
+	w := httptest.NewRecorder()
+	sv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Errorf("expected 302, got %d", w.Code)
+	}
+	if got := w.Header().Get("Location"); got != "/.tolink/" {
+		t.Errorf("expected Location /.tolink/, got %q", got)
+	}
+}
+
 func TestUnknownShortcutRedirectsToAdmin(t *testing.T) {
 	sv := newTestServer(t)
 

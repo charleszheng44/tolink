@@ -27,14 +27,40 @@ func (sv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sv.adminHandler(w, r)
 		return
 	}
-	shortcut := strings.TrimPrefix(r.URL.Path, "/")
-	if shortcut != "" {
-		if url, ok := sv.s.Get(shortcut); ok {
-			http.Redirect(w, r, url, http.StatusFound)
+	path := strings.TrimPrefix(r.URL.Path, "/")
+	if path != "" {
+		if target, remainder, ok := sv.resolve(path); ok {
+			location := target
+			if remainder != "" {
+				location += "/" + remainder
+			}
+			if r.URL.RawQuery != "" {
+				location += "?" + r.URL.RawQuery
+			}
+			if fragment := r.URL.EscapedFragment(); fragment != "" {
+				location += "#" + fragment
+			}
+			http.Redirect(w, r, location, http.StatusFound)
 			return
 		}
 	}
 	http.Redirect(w, r, "/.tolink/", http.StatusFound)
+}
+
+// resolve finds the longest stored shortcut that is a segment-aligned prefix of path.
+// It returns the stored URL, the remainder after the matched prefix, and whether a match was found.
+func (sv *Server) resolve(path string) (string, string, bool) {
+	candidate := path
+	for {
+		if url, ok := sv.s.Get(candidate); ok {
+			return url, strings.TrimPrefix(path[len(candidate):], "/"), true
+		}
+		idx := strings.LastIndex(candidate, "/")
+		if idx == -1 {
+			return "", "", false
+		}
+		candidate = candidate[:idx]
+	}
 }
 
 func (sv *Server) adminHandler(w http.ResponseWriter, r *http.Request) {
