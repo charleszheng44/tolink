@@ -5,7 +5,7 @@ tolink is a local-only URL shortcut service. Add a shortcut like `gh → https:/
 ## Prerequisites
 
 - Go 1.21+
-- Linux with systemd
+- Linux with systemd, or macOS
 
 ## One-time `/etc/hosts` setup
 
@@ -15,7 +15,7 @@ Add the following line to `/etc/hosts` so your browser resolves `to` to localhos
 127.0.0.1 to
 ```
 
-## One-time port redirect setup
+## One-time port redirect setup (Linux)
 
 The service listens on port 4080, but browsers connect to port 80 for plain `http://` URLs. Redirect port 80 to 4080 with iptables:
 
@@ -29,6 +29,29 @@ To persist the rule across reboots:
 sudo apt install iptables-persistent
 sudo netfilter-persistent save
 ```
+
+## One-time port redirect setup (macOS)
+
+Create the anchor file `/etc/pf.anchors/com.tolink`:
+
+```
+rdr pass on lo0 inet proto tcp from any to 127.0.0.1 port 80 -> 127.0.0.1 port 4080
+```
+
+Append to `/etc/pf.conf`:
+
+```
+rdr-anchor "com.tolink"
+load anchor "com.tolink" from "/etc/pf.anchors/com.tolink"
+```
+
+Enable pf and load the rules:
+
+```bash
+sudo pfctl -ef /etc/pf.conf
+```
+
+These persist across reboots because pf reads `/etc/pf.conf` at boot.
 
 After this, `http://to/gh` works in your browser. Once you have visited any `http://to/…` URL, Chrome learns that `to` is a real host and you can drop the `http://` prefix — bare `to/gh` will navigate directly without searching.
 
