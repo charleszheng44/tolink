@@ -45,13 +45,7 @@ rdr-anchor "com.tolink"
 load anchor "com.tolink" from "/etc/pf.anchors/com.tolink"
 ```
 
-Enable pf and load the rules:
-
-```bash
-sudo pfctl -ef /etc/pf.conf
-```
-
-These persist across reboots because pf reads `/etc/pf.conf` at boot.
+Then run `make install` (see below). The Makefile installs a LaunchDaemon at `/Library/LaunchDaemons/com.charleszheng44.tolink.pf.plist` that runs `pfctl -ef /etc/pf.conf` at boot, so the redirect persists across reboots. Loading the LaunchDaemon during install also enables pf immediately, so no separate `pfctl` command is needed.
 
 After this, `http://to/gh` works in your browser. Once you have visited any `http://to/…` URL, Chrome learns that `to` is a real host and you can drop the `http://` prefix — bare `to/gh` will navigate directly without searching.
 

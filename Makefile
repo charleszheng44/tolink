@@ -14,6 +14,9 @@ ifeq ($(UNAME),Darwin)
 	cp tolink.plist $(HOME)/Library/LaunchAgents/com.charleszheng44.tolink.plist
 	launchctl unload $(HOME)/Library/LaunchAgents/com.charleszheng44.tolink.plist 2>/dev/null || true
 	launchctl load $(HOME)/Library/LaunchAgents/com.charleszheng44.tolink.plist
+	sudo cp tolink-pf.plist /Library/LaunchDaemons/com.charleszheng44.tolink.pf.plist
+	sudo launchctl unload /Library/LaunchDaemons/com.charleszheng44.tolink.pf.plist 2>/dev/null || true
+	sudo launchctl load /Library/LaunchDaemons/com.charleszheng44.tolink.pf.plist
 else
 	sudo cp bin/tolink /usr/local/bin/tolink
 	sudo cp bin/tolinkctl /usr/local/bin/tolinkctl
@@ -30,6 +33,8 @@ uninstall:
 ifeq ($(UNAME),Darwin)
 	launchctl unload $(HOME)/Library/LaunchAgents/com.charleszheng44.tolink.plist 2>/dev/null || true
 	rm -f $(HOME)/Library/LaunchAgents/com.charleszheng44.tolink.plist
+	sudo launchctl unload /Library/LaunchDaemons/com.charleszheng44.tolink.pf.plist 2>/dev/null || true
+	sudo rm -f /Library/LaunchDaemons/com.charleszheng44.tolink.pf.plist
 	sudo rm -f /usr/local/bin/tolink /usr/local/bin/tolinkctl
 else
 	sudo systemctl stop tolink || true
